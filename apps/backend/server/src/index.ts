@@ -14,6 +14,7 @@
 import { PORT } from './env.js';
 
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import express, { type Request, type Response, type NextFunction } from 'express';
@@ -85,17 +86,39 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   res.status(status).json({ error: err.message || 'Internal server error' });
 });
 
+// pg throws an AggregateError whose own message is empty, so unwrap it -
+// otherwise the deploy log shows a bare "Cannot reach PostgreSQL:".
+function describe(err: any): string {
+  if (err?.errors?.length) {
+    return err.errors.map((e: any) => e?.message || e?.code || String(e)).join('; ');
+  }
+  return err?.message || err?.code || String(err);
+}
+
 // Every module's connection is checked before the port opens, so a bad
 // DATABASE_URL fails the deploy instead of surfacing on the first request.
-Promise.all([assertUserDb(), assertMechanicDb(), assertAdminDb()])
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`✓ FixMyRide backend on http://localhost:${PORT}`);
-      console.log(`  /api/user  ·  /api/mechanic  ·  /api/admin  ·  /health`);
-    });
-  })
-  .catch((err) => {
-    console.error('\n[backend] Cannot reach PostgreSQL:', err.message);
-    console.error('Check USER_DATABASE_URL / MECHANIC_DATABASE_URL / ADMIN_DATABASE_URL.\n');
+// allSettled rather than all: report every broken module in one go, named by
+// the variable to fix, instead of whichever happened to reject first.
+const checks = [
+  ['USER_DATABASE_URL', assertUserDb],
+  ['MECHANIC_DATABASE_URL', assertMechanicDb],
+  ['ADMIN_DATABASE_URL', assertAdminDb],
+] as const;
+
+Promise.allSettled(checks.map(([, check]) => check())).then((results) => {
+  const failures = results.flatMap((r, i) =>
+    r.status === 'rejected' ? [`  ${checks[i][0]}: ${describe(r.reason)}`] : [],
+  );
+
+  if (failures.length) {
+    // Synchronous write: a buffered console.error is discarded when
+    // process.exit() follows it. See the note on fatal() in env.ts.
+    fs.writeSync(2, '\n[backend] Cannot reach PostgreSQL:\n' + failures.join('\n') + '\n\n');
     process.exit(1);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`✓ FixMyRide backend on http://localhost:${PORT}`);
+    console.log(`  /api/user  ·  /api/mechanic  ·  /api/admin  ·  /health`);
   });
+});

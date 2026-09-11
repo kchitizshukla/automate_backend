@@ -4,6 +4,7 @@
 // import sees a populated env.
 import dotenv from 'dotenv';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -49,10 +50,23 @@ process.env.MECHANIC_INTERNAL_API =
 // here — this module is evaluated before any db.ts is imported.
 const required = ['USER_DATABASE_URL', 'MECHANIC_DATABASE_URL', 'ADMIN_DATABASE_URL'];
 const missing = required.filter((k) => !process.env[k]);
-if (missing.length) {
-  console.error(`\n[backend] Missing required environment variable(s): ${missing.join(', ')}`);
-  console.error('Set them in the host dashboard, or locally in apps/backend/server/.env\n');
+/**
+ * Print and die. console.error is asynchronous when stderr is a pipe (which it
+ * is under a process manager such as npm, or a PaaS log collector), and
+ * process.exit() discards anything still buffered - so the diagnostic vanishes
+ * and the platform shows only "exited with code 1". Writing to fd 2 is
+ * synchronous and always lands.
+ */
+function fatal(...msg: string[]): never {
+  fs.writeSync(2, '\n' + msg.join('\n') + '\n\n');
   process.exit(1);
+}
+
+if (missing.length) {
+  fatal(
+    `[backend] Missing required environment variable(s): ${missing.join(', ')}`,
+    'Set them in the host dashboard, or locally in apps/backend/server/.env',
+  );
 }
 
 if (!process.env.JWT_SECRET) {
