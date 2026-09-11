@@ -22,8 +22,21 @@ if (!connectionString) {
   process.exit(1);
 }
 
+// Managed Postgres (Render, Neon, Supabase) requires TLS, and from the client's
+// point of view their certificates are typically self-signed. A local server
+// usually has TLS off entirely. Default by host, and allow an explicit override
+// via PGSSLMODE=disable|require for anything unusual.
+function sslConfig(url: string): false | { rejectUnauthorized: boolean } {
+  const mode = process.env.PGSSLMODE;
+  if (mode === 'disable') return false;
+  if (mode) return { rejectUnauthorized: false };
+  const isLocal = /@(localhost|127\.0\.0\.1|\[::1\])[:/]/.test(url);
+  return isLocal ? false : { rejectUnauthorized: false };
+}
+
 export const pool = new Pool({
   connectionString,
+  ssl: sslConfig(connectionString),
   max: Number(process.env.PG_POOL_MAX) || 10,
   idleTimeoutMillis: 30_000,
 });
