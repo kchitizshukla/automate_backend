@@ -1,0 +1,42 @@
+# Render blueprint — one web service for the whole backend.
+#
+# The user, mechanic and admin modules run in a single process and are
+# namespaced by path:
+#   https://<service>.onrender.com/api/user
+#   https://<service>.onrender.com/api/mechanic
+#   https://<service>.onrender.com/api/admin
+#
+# The three DATABASE_URLs are marked sync:false so they are entered as secrets
+# in the Render dashboard rather than committed here.
+services:
+  - type: web
+    name: fixmyride-backend
+    runtime: node
+    plan: free
+    rootDir: .
+    buildCommand: npm ci
+    startCommand: npm run start:backend
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Render injects PORT; the app reads it in apps/backend/server/src/env.ts.
+      - key: USER_DATABASE_URL
+        sync: false
+      - key: MECHANIC_DATABASE_URL
+        sync: false
+      - key: ADMIN_DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: INTERNAL_DISPATCH_SECRET
+        generateValue: true
+      - key: MAX_UPLOAD_MB
+        value: "5"
+      - key: PG_POOL_MAX
+        value: "5"
+      # Comma-separated Vercel origins of the four web apps.
+      - key: CORS_ORIGINS
+        sync: false

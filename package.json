@@ -1,0 +1,27 @@
+{
+  "name": "automate-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AutoMate / FixMyRide — backend API. User, mechanic and admin modules in one deployable service.",
+  "packageManager": "npm@10.8.2",
+  "workspaces": [
+    "apps/backend/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "start": "npm run start --workspace apps/backend/server",
+    "start:backend": "npm run start --workspace apps/backend/server",
+    "dev": "npm run dev --workspace apps/backend/server",
+    "dev:backend": "npm run dev --workspace apps/backend/server",
+    "dev:user:split": "npm run dev --workspace apps/backend/user",
+    "dev:mechanic:split": "npm run dev --workspace apps/backend/mechanic",
+    "dev:admin:split": "npm run dev --workspace apps/backend/admin",
+    "typecheck": "tsc -p apps/backend/server/tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

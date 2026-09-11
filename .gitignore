@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.turbo/
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+apps/backend/*/uploads/*
+!apps/backend/*/uploads/.gitkeep
+*.db
+*.db-wal
+*.db-shm
+.DS_Store
