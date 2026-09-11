@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "description": "AutoMate / FixMyRide — backend API. User, mechanic and admin modules in one deployable service.",
-  "packageManager": "npm@10.8.2",
   "workspaces": [
     "apps/backend/*",
     "packages/*"
