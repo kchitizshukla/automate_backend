@@ -7,8 +7,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+// The folder holding the server/user/mechanic/admin modules.
 const backendRoot = path.resolve(here, '../..');
-const repoRoot = path.resolve(here, '../../../..');
+// The repo root differs by layout: it IS backendRoot when the backend is its own
+// repo, and two levels up when the modules sit under apps/backend/ in the
+// monorepo. Both are tried below; dotenv ignores a path that does not exist.
+const repoRootCandidates = [backendRoot, path.resolve(backendRoot, '../..')];
 
 // Snapshot the *real* environment before dotenv runs. The per-module .env files
 // below still carry the split-service values (ports 4001/4002) from when each
@@ -26,7 +30,7 @@ dotenv.config({ path: path.resolve(here, '../.env') });
 dotenv.config({ path: path.join(backendRoot, 'user/.env') });
 dotenv.config({ path: path.join(backendRoot, 'mechanic/.env') });
 dotenv.config({ path: path.join(backendRoot, 'admin/.env') });
-dotenv.config({ path: path.join(repoRoot, '.env') });
+for (const root of repoRootCandidates) dotenv.config({ path: path.join(root, '.env') });
 
 /** The one port the consolidated service listens on. Render injects PORT. */
 export const PORT = Number(process.env.PORT) || Number(process.env.BACKEND_PORT) || 4000;
